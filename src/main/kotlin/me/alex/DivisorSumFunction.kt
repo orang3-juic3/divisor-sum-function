@@ -76,8 +76,35 @@ class TheMaths(private val lowerBound : Int, private val upperBound : Int, val N
         return total
     }
 
+    fun experimentalSigma(n: Int): Int {
+        // Traversing through all prime factors.
+        var n = n
+        var res = 1
+        var i = 2
+        while (i <= sqrt(n.toDouble())) {
+            var curr_sum = 1
+            var curr_term = 1
+            while (n % i == 0) {
+                // THE BELOW STATEMENT MAKES
+                // IT BETTER THAN ABOVE METHOD
+                // AS WE REDUCE VALUE OF n.
+                n /= i
+                curr_term *= i
+                curr_sum += curr_term
+            }
+            res *= curr_sum
+            i++
+        }
+
+        // This condition is to handle
+        // the case when n is a prime
+        // number greater than 2
+        if (n > 2) res *= 1 + n
+        return res
+    }
+
     fun nStratum(x : Int, N : Int) : Int {
-        return sigma(N) * (x/N + 1)
+        return experimentalSigma(N) * (x/N + 1)
     }
 
     private fun nTerriblePerfect() : IntArray {
@@ -86,8 +113,7 @@ class TheMaths(private val lowerBound : Int, private val upperBound : Int, val N
         var maxInd = 0
         for (i in (lowerBound + threadNumber)..upperBound step numberOfThreads) {
             val mod = i % N
-            val secondBoolean : Boolean = (sigmaN * ((i / N.toDouble()) + 1)) == sigma(i).toDouble()
-            if (mod != 0 && secondBoolean) {
+            if (mod != 0 && (sigmaN * ((i / N.toDouble()) + 1)) == experimentalSigma(i).toDouble()) {
                 terrible[maxInd] = i
                 maxInd += 1
             }
