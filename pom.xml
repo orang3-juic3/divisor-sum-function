@@ -5,7 +5,7 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>me.alex</groupId>
-  <artifactId>ScreenshotBot</artifactId>
+  <artifactId>DivisorSumFunction</artifactId>
   <version>1.0</version>
 
   <name>ScreenshotBot</name>
@@ -187,7 +187,7 @@
               <transformers>
                 <transformer implementation=
                                      "org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                  <mainClass>me.alex.ScreenshotBotKt</mainClass>
+                  <mainClass>me.alex.DivisorSumFunctionKt</mainClass>
                 </transformer>
               </transformers>
             </configuration>

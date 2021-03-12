@@ -1,6 +1,9 @@
 package me.alex
 
+import Sigma
+import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.ForkJoinPool
 import java.util.concurrent.Future
 import kotlin.collections.ArrayList
 import kotlin.math.floor
@@ -13,6 +16,7 @@ fun main() {
     val upperBound = input[1]
     val lowerBound = input[2]
     val N = input[3]
+    /*
     val newFixedThreadPool = Executors.newFixedThreadPool(threads);
     val futureArray : MutableList<Future<*>> = ArrayList()
     for (i in 0 until threads) {
@@ -34,6 +38,11 @@ fun main() {
         futureArray.removeIf() { it.isDone }
     }
     exitProcess(0)
+     */
+    val forkJoinPool = ForkJoinPool(threads)
+    val initialTask = Sigma(lowerBound, upperBound, N, 1)
+    val list : List<Int> = forkJoinPool.invoke(initialTask)
+    list.forEach {println(it)}
 }
 
 fun calculateChunkSize(threads: Int, upperBound: Int, lowerBound: Int) {
@@ -107,22 +116,19 @@ class TheMaths(private val lowerBound : Int, private val upperBound : Int, val N
         return experimentalSigma(N) * (x/N + 1)
     }
 
-    private fun nTerriblePerfect() : IntArray {
+    private fun nTerriblePerfect() : List<Int> {
         val sigmaN = 2 * N
-        val terrible : IntArray = IntArray((upperBound - lowerBound) / numberOfThreads)
-        var maxInd = 0
+        val terrible :  MutableList<Int> = ArrayList()
         for (i in (lowerBound + threadNumber)..upperBound step numberOfThreads) {
             val mod = i % N
             if (mod != 0 && (sigmaN * ((i / N.toDouble()) + 1)) == experimentalSigma(i).toDouble()) {
-                terrible[maxInd] = i
-                maxInd += 1
+                terrible.add(i)
             }
         }
-        return terrible.sliceArray(0 until maxInd)
+        return terrible
     }
 
     override fun run() {
         nTerriblePerfect().forEach { println(it) }
     }
 }
-
