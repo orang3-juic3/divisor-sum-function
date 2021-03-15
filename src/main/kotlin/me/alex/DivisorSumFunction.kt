@@ -1,21 +1,62 @@
 package me.alex
 
-import Sigma
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
+import com.google.api.services.sheets.v4.Sheets
+import com.google.api.services.sheets.v4.model.ValueRange
+import java.util.*
 import java.util.concurrent.ForkJoinPool
-import java.util.concurrent.Future
+import java.util.stream.Collectors
 import kotlin.collections.ArrayList
 import kotlin.math.floor
 import kotlin.math.sqrt
 import kotlin.system.exitProcess
 
+data class GoogleApi(val sheets: Sheets, val startCol: Char, val id: String)
+
 fun main() {
+
+    val sheetsService: Sheets = SheetsService.sheetsService
+
     val input = getInput()
-    val threads = input[0]
-    val upperBound = input[1]
-    val lowerBound = input[2]
-    val N = input[3]
+    val upperBound = input[0].toInt()
+    val lowerBound = input[1].toInt()
+    val N = input[2].toInt()
+    val id = input[3]
+    var targetNumber = 66
+    var range: ValueRange = sheetsService.spreadsheets().values().get(id,"Sheet1!${targetNumber.toChar()}1").execute()
+    var results: List<List<Any>?>? = range.getValues()
+    while (results != null) {
+        val result = results[0]?.get(0)
+        if (result is String) {
+            if (result == N.toString()) {
+                break
+            }
+        }
+        targetNumber++
+        range = sheetsService.spreadsheets().values().get(id, "Sheet1!${targetNumber.toChar()}1").execute()
+        results = range.getValues()
+    }
+    if (results == null) {
+        range = ValueRange().setValues(listOf(listOf(N)))
+        sheetsService.spreadsheets().values().update(id, "Sheet1!${targetNumber.toChar()}1", range).setValueInputOption("RAW").execute()
+    }
+    print(targetNumber)
+    range = sheetsService.spreadsheets().values().get(id, "Sheet1!${targetNumber.toChar()}2").execute()
+    results = range.getValues()
+    var replace=  true
+    if (results != null) {
+        val result = results[0]?.get(0)
+        if (result is String) {
+            val max: Double = result.toDouble()
+            if (max >= upperBound) {
+                replace = false
+            }
+        }
+    }
+    if (replace) {
+        range = ValueRange().setValues(listOf(listOf(upperBound)))
+        sheetsService.spreadsheets().values().update(id, "Sheet1!${targetNumber.toChar()}2", range).setValueInputOption("RAW").execute()
+    }
+
     /*
     val newFixedThreadPool = Executors.newFixedThreadPool(threads);
     val futureArray : MutableList<Future<*>> = ArrayList()
@@ -39,33 +80,78 @@ fun main() {
     }
     exitProcess(0)
      */
-    val forkJoinPool = ForkJoinPool(threads)
-    val initialTask = Sigma(lowerBound, upperBound, N, 1)
+    val forkJoinPool = ForkJoinPool.commonPool()
+    val api =GoogleApi(sheetsService, targetNumber.toChar(), id)
+    val initialTask = Sigma(lowerBound, upperBound, N, 1, api)
     val list : List<Int> = forkJoinPool.invoke(initialTask)
+    updateSheets(api, list)
     list.forEach {println(it)}
+}
+fun updateSheets(api: GoogleApi, items: List<Int>) {
+    if (items.isNullOrEmpty()) {
+        println("Nothing to update!")
+        return
+    }
+    val col = api.startCol
+    val sheetsService = api.sheets
+    val id = api.id
+    val nums: MutableList<Int> = items.toMutableList()
+    var index = 3
+    var range: ValueRange = sheetsService.spreadsheets().values().get(id, "Sheet1!${col}${index}").execute()
+    var results: List<List<Any>?>? = range.getValues()
+    while (results != null) {
+        val result = results[0]?.get(0)
+        if (result is String) {
+            nums.add(result.toInt())
+        }
+        index++
+        range = sheetsService.spreadsheets().values().get(id, "Sheet1!${col}${index}").execute()
+        results = range.getValues()
+    }
+    var replace: MutableList<MutableList<Any>> = mutableListOf()
+    for (i in 3..index) {
+        replace.add(mutableListOf(""))
+    }
+    sheetsService.spreadsheets().values().update(id, "Sheet1!${col}${3}:${col}${index}", ValueRange().setValues(replace)).setValueInputOption("RAW").execute()
+    val finalItems: List<String> = nums.stream().distinct().sorted().map { it.toString() }.collect(Collectors.toList())
+    replace = mutableListOf()
+    for (i in finalItems) {
+        replace.add(mutableListOf(i))
+    }
+    for (i in 0 until replace.size) {
+        sheetsService.spreadsheets().values()
+                .update(id, "Sheet1!${col}${i + 3}",
+                        ValueRange().setValues(listOf(listOf(finalItems[i]))))
+                .setValueInputOption("RAW").execute()
+    }
+
+
+
 }
 
 fun calculateChunkSize(threads: Int, upperBound: Int, lowerBound: Int) {
 
 }
 
-fun getInput() : Array<Int> {
-    println("Enter the number of threads to use (recommended not to use the number of threads your system has)")
-    val threadStr = readLine()
+fun getInput() : Array<String> {
     println("Enter the upper bound to check up to")
-    val upperBoundStr = readLine()
+    val upperBoundStr: String? = readLine()
     println("Enter the lower bound")
-    val lowerBoundStr = readLine()
+    val lowerBoundStr: String? = readLine()
     println("Enter N")
-    val nStr = readLine()
-    if (threadStr.isNullOrEmpty() || upperBoundStr.isNullOrEmpty() || lowerBoundStr.isNullOrEmpty() || nStr.isNullOrEmpty()) {
+    val nStr: String? = readLine()
+    println("Enter the spreadsheet link")
+    val rawLink: String? = readLine()
+    val splits: Array<String> = rawLink!!.split("/").toTypedArray()
+    val index = listOf(*splits).indexOf("d") + 1
+    if (upperBoundStr!!.isEmpty() || lowerBoundStr!!.isEmpty() || nStr!!.isEmpty()) {
         println("You need to enter valid inputs, crashing program now...")
         exitProcess(1)
     }
-    return arrayOf(threadStr.toInt(), upperBoundStr.toInt(), lowerBoundStr.toInt(), nStr.toInt())
+    return arrayOf(upperBoundStr, lowerBoundStr, nStr, splits[index])
 }
 
-class TheMaths(private val lowerBound : Int, private val upperBound : Int, val N : Int, private var threadNumber : Int, private val numberOfThreads : Int) : Runnable {
+class TheMaths(private val lowerBound: Int, private val upperBound: Int, val N: Int, private var threadNumber: Int, private val numberOfThreads: Int) : Runnable {
     fun sigma(number: Int) : Int{
         if (number == 1) {
             return 1
@@ -112,7 +198,7 @@ class TheMaths(private val lowerBound : Int, private val upperBound : Int, val N
         return res
     }
 
-    fun nStratum(x : Int, N : Int) : Int {
+    fun nStratum(x: Int, N: Int) : Int {
         return experimentalSigma(N) * (x/N + 1)
     }
 
