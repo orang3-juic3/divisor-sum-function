@@ -146,7 +146,7 @@ fun getInput() : Array<String> {
     val index = listOf(*splits).indexOf("d") + 1
     if (upperBoundStr!!.isEmpty() || lowerBoundStr!!.isEmpty() || nStr!!.isEmpty()) {
         println("You need to enter valid inputs, crashing program now...")
-        exitProcess(1)
+        exitProcess(1) // frown
     }
     return arrayOf(upperBoundStr, lowerBoundStr, nStr, splits[index])
 }
