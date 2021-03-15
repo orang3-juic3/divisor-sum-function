@@ -1,34 +1,36 @@
-import java.util.*
+package me.alex
+
+import com.google.api.services.sheets.v4.Sheets
 import java.util.concurrent.RecursiveTask
 import kotlin.collections.ArrayList
-import kotlin.math.floor
 import kotlin.math.sqrt
 
-class Sigma(private val lowerBound : Int, private val upperBound : Int, val N : Int, val step : Int) : RecursiveTask<List<Int>>() {
-    fun computeSigma(n: Int): Int {
+class Sigma(private val lowerBound : Int, private val upperBound : Int, private val N : Int, private val step : Int, private val googleApi: GoogleApi) : RecursiveTask<List<Int>>() {
+    private val sheetsService: Sheets = SheetsService.sheetsService
+    private fun computeSigma(n: Int): Int {
         // Traversing through all prime factors.
-        var n = n
+        var betterN = n
         var res = 1
         var i = 2
-        while (i <= sqrt(n.toDouble())) {
-            var curr_sum = 1
-            var curr_term = 1
-            while (n % i == 0) {
+        while (i <= sqrt(betterN.toDouble())) {
+            var currSum = 1
+            var currTerm = 1
+            while (betterN % i == 0) {
                 // THE BELOW STATEMENT MAKES
                 // IT BETTER THAN ABOVE METHOD
                 // AS WE REDUCE VALUE OF n.
-                n /= i
-                curr_term *= i
-                curr_sum += curr_term
+                betterN /= i
+                currTerm *= i
+                currSum += currTerm
             }
-            res *= curr_sum
+            res *= currSum
             i++
         }
 
         // This condition is to handle
         // the case when n is a prime
         // number greater than 2
-        if (n > 2) res *= 1 + n
+        if (betterN > 2) res *= 1 + betterN
         return res
     }
 
@@ -46,15 +48,15 @@ class Sigma(private val lowerBound : Int, private val upperBound : Int, val N : 
 
     override fun compute(): List<Int> {
         val difference : Int = (upperBound - lowerBound)
-        if (difference > 1000000) {
+        return if (difference > 1000000) {
             val mid = (lowerBound + difference / 2)
-            val left = Sigma(lowerBound, mid, N, step)
-            val right = Sigma(mid, upperBound, N, step)
+            val left = Sigma(lowerBound, mid, N, step, googleApi)
+            val right = Sigma(mid, upperBound, N, step, googleApi)
             invokeAll(left, right)
-            return mergeParts(left, right)
+            mergeParts(left, right)
         }
         else {
-            return nTerriblePerfect()
+            nTerriblePerfect()
         }
     }
 
