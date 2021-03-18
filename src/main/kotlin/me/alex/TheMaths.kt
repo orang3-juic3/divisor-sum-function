@@ -5,7 +5,7 @@ import java.util.concurrent.RecursiveTask
 import kotlin.collections.ArrayList
 import kotlin.math.sqrt
 
-class Sigma(private val lowerBound : Int, private val upperBound : Int, private val N : Int, private val step : Int, private val googleApi: GoogleApi) : RecursiveTask<List<Int>>() {
+class Sigma(private val lowerBound : Int, private val upperBound : Int, private val N : Int, private val step : Int) : RecursiveTask<List<Int>>() {
     private val sheetsService: Sheets = SheetsService.sheetsService
     private fun computeSigma(n: Int): Int {
         // Traversing through all prime factors.
@@ -50,8 +50,8 @@ class Sigma(private val lowerBound : Int, private val upperBound : Int, private 
         val difference : Int = (upperBound - lowerBound)
         return if (difference > 1000000) {
             val mid = (lowerBound + difference / 2)
-            val left = Sigma(lowerBound, mid, N, step, googleApi)
-            val right = Sigma(mid, upperBound, N, step, googleApi)
+            val left = Sigma(lowerBound, mid, N, step)
+            val right = Sigma(mid, upperBound, N, step)
             invokeAll(left, right)
             mergeParts(left, right)
         }
